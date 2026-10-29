@@ -36,6 +36,31 @@
       </details>
     </section>
 
+    <section id="view-check" class="view" hidden>
+      <div class="check-box">
+        <textarea id="check-text" rows="3" placeholder="Paste a text you got (long-press a message in Messages, then Copy)"></textarea>
+        <input id="check-from" autocomplete="off" placeholder="From (optional): name or number">
+        <div class="actions">
+          <button type="button" class="secondary" id="check-paste">Paste</button>
+          <button type="button" class="primary" id="check-run">Check it</button>
+        </div>
+        <label class="import-btn">
+          <input type="file" id="check-import" accept=".txt,text/plain" hidden>
+          Import texts saved by your Shortcut
+        </label>
+      </div>
+      <ul id="check-list" class="list"></ul>
+      <div id="check-empty" class="empty" hidden>
+        <p class="empty-big">Not sure if a text needs a reply?</p>
+        <p>Paste it above. Left On Read sorts out what's worth answering, skips spam and automated texts, and suggests what to say. Everything stays on your phone.</p>
+      </div>
+      <details id="hidden-section" class="done-section" hidden>
+        <summary>Skipped: spam, automated and no-reply-needed <span id="hidden-count"></span></summary>
+        <ul id="hidden-list" class="list"></ul>
+        <button type="button" class="link-btn" id="clear-hidden">Clear skipped</button>
+      </details>
+    </section>
+
     <section id="view-templates" class="view" hidden>
       <ul id="template-list" class="list"></ul>
       <button type="button" class="secondary wide" id="new-template">New template</button>
@@ -49,6 +74,10 @@
     <button type="button" class="tab active" data-view="replies">
       <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h16v11H8l-4 4z"/></svg>
       <span>To reply</span>
+    </button>
+    <button type="button" class="tab" data-view="check">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M10.5 4a6.5 6.5 0 1 1 0 13a6.5 6.5 0 0 1 0-13z M15.5 15.5L20 20 M7.5 10.5l2 2 3.5-3.5"/></svg>
+      <span>Check</span>
     </button>
     <button type="button" class="tab" data-view="templates">
       <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 3h9l4 4v14H6z M14 3v5h5 M9 12h7 M9 16h7"/></svg>
@@ -123,6 +152,7 @@
 
   <div id="toast" class="toast" role="status" aria-live="polite"></div>
 
+  <script src="triage.js"></script>
   <script src="app.js"></script>
 </body>
 </html>

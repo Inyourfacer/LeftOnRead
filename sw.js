@@ -1,6 +1,6 @@
 // Offline cache so the app opens with no signal. Bump VERSION when files change.
-const VERSION = 'lor-v1';
-const FILES = ['./', 'index.html', 'styles.css', 'app.js', 'manifest.webmanifest', 'icons/icon.svg', 'icons/icon-180.png', 'icons/icon-512.png'];
+const VERSION = 'lor-v2';
+const FILES = ['./', 'index.html', 'styles.css', 'app.js', 'triage.js', 'manifest.webmanifest', 'icons/icon.svg', 'icons/icon-180.png', 'icons/icon-512.png'];
 
 self.addEventListener('install', e => {
   e.waitUntil(caches.open(VERSION).then(c => c.addAll(FILES)).then(() => self.skipWaiting()));
