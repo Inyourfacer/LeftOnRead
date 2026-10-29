@@ -1,0 +1,128 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Left On Read</title>
+  <meta name="description" content="Remember who you owe a text, and get a reply drafted fast.">
+  <meta name="theme-color" content="#f6f5f2" media="(prefers-color-scheme: light)">
+  <meta name="theme-color" content="#151515" media="(prefers-color-scheme: dark)">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="Left On Read">
+  <link rel="apple-touch-icon" href="icons/icon-180.png">
+  <link rel="icon" href="icons/icon.svg" type="image/svg+xml">
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <header class="top">
+    <h1 id="screen-title">To reply</h1>
+    <p id="screen-sub" class="sub"></p>
+  </header>
+
+  <main>
+    <section id="view-replies" class="view">
+      <ul id="reply-list" class="list"></ul>
+      <div id="replies-empty" class="empty" hidden>
+        <p class="empty-big">Inbox zero, socially.</p>
+        <p>When someone texts you and you can't answer yet, tap <strong>+</strong> so you don't forget them.</p>
+      </div>
+      <details id="done-section" class="done-section" hidden>
+        <summary>Replied <span id="done-count"></span></summary>
+        <ul id="done-list" class="list"></ul>
+        <button type="button" class="link-btn" id="clear-done">Clear replied</button>
+      </details>
+    </section>
+
+    <section id="view-templates" class="view" hidden>
+      <ul id="template-list" class="list"></ul>
+      <button type="button" class="secondary wide" id="new-template">New template</button>
+      <p class="hint">Use <code>{name}</code> to fill in the person's first name automatically. Put anything you need to fill in yourself in <code>[brackets]</code>.</p>
+    </section>
+  </main>
+
+  <button type="button" class="fab" id="add-reply" aria-label="Add someone to reply to">+</button>
+
+  <nav class="tabs" aria-label="Sections">
+    <button type="button" class="tab active" data-view="replies">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h16v11H8l-4 4z"/></svg>
+      <span>To reply</span>
+    </button>
+    <button type="button" class="tab" data-view="templates">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 3h9l4 4v14H6z M14 3v5h5 M9 12h7 M9 16h7"/></svg>
+      <span>Templates</span>
+    </button>
+  </nav>
+
+  <!-- Add / edit someone to reply to -->
+  <dialog id="reply-dialog" class="sheet">
+    <form method="dialog" id="reply-form">
+      <h2 id="reply-dialog-title">Who do you owe a reply?</h2>
+      <label>Name
+        <input name="name" required autocomplete="off" placeholder="Mom, Sam, Work group chat…">
+      </label>
+      <label>What was it about? <span class="opt">(optional)</span>
+        <textarea name="note" rows="2" placeholder="Asked about dinner Saturday"></textarea>
+      </label>
+      <fieldset>
+        <legend>Remind me</legend>
+        <div class="chips" id="due-chips">
+          <button type="button" class="chip" data-due="1h">In 1 hour</button>
+          <button type="button" class="chip" data-due="3h">In 3 hours</button>
+          <button type="button" class="chip" data-due="tonight">Tonight</button>
+          <button type="button" class="chip" data-due="tomorrow">Tomorrow AM</button>
+          <button type="button" class="chip" data-due="weekend">This weekend</button>
+        </div>
+        <input type="datetime-local" name="due" required>
+      </fieldset>
+      <div class="actions">
+        <button type="button" class="secondary" data-close>Cancel</button>
+        <button type="submit" class="primary" value="save">Save</button>
+      </div>
+    </form>
+  </dialog>
+
+  <!-- Draft a reply from a template -->
+  <dialog id="draft-dialog" class="sheet">
+    <form method="dialog" id="draft-form">
+      <h2>Reply to <span id="draft-name"></span></h2>
+      <p id="draft-note" class="sub"></p>
+      <div class="chips scroll" id="draft-templates"></div>
+      <textarea id="draft-text" rows="5" placeholder="Pick a template or write your own"></textarea>
+      <p class="hint">Copies to your clipboard. Open Messages and paste it in yourself, because this app can't send anything.</p>
+      <div class="actions">
+        <button type="button" class="secondary" data-close>Close</button>
+        <button type="button" class="primary" id="copy-draft">Copy text</button>
+      </div>
+      <div class="actions after-copy">
+        <button type="button" class="secondary" id="draft-snooze">Snooze 1 hour</button>
+        <button type="button" class="secondary" id="draft-done">Mark replied</button>
+      </div>
+    </form>
+  </dialog>
+
+  <!-- Add / edit template -->
+  <dialog id="template-dialog" class="sheet">
+    <form method="dialog" id="template-form">
+      <h2 id="template-dialog-title">Template</h2>
+      <label>Title
+        <input name="title" required autocomplete="off" placeholder="Running late">
+      </label>
+      <label>Message
+        <textarea name="body" rows="4" required placeholder="Hey {name}, …"></textarea>
+      </label>
+      <div class="actions">
+        <button type="button" class="danger" id="delete-template">Delete</button>
+        <button type="button" class="secondary" data-close>Cancel</button>
+        <button type="submit" class="primary" value="save">Save</button>
+      </div>
+    </form>
+  </dialog>
+
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
+
+  <script src="app.js"></script>
+</body>
+</html>
