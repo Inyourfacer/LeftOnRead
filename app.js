@@ -26,10 +26,14 @@
       const raw = localStorage.getItem(STORE_KEY);
       if (raw) {
         const data = JSON.parse(raw);
-        if (Array.isArray(data.replies) && Array.isArray(data.templates)) return data;
+        if (Array.isArray(data.replies) && Array.isArray(data.templates)) {
+          data.inbox = Array.isArray(data.inbox) ? data.inbox : [];
+          data.dismissed = Array.isArray(data.dismissed) ? data.dismissed : [];
+          return data;
+        }
       }
     } catch (_) { /* fall through to defaults */ }
-    return { replies: [], templates: DEFAULT_TEMPLATES.map(t => ({ id: uid(), ...t })) };
+    return { replies: [], templates: DEFAULT_TEMPLATES.map(t => ({ id: uid(), ...t })), inbox: [], dismissed: [] };
   }
 
   let state = load();
@@ -160,6 +164,10 @@
       $('#screen-sub').textContent = open.length
         ? `${open.length} waiting` + (overdue ? `, ${overdue} overdue` : '')
         : '';
+    } else if (currentView === 'check') {
+      const worth = state.inbox.filter(m => m.verdict === 'reply').length;
+      $('#screen-title').textContent = 'Check texts';
+      $('#screen-sub').textContent = worth ? `${worth} worth replying to` : 'Is this worth a reply?';
     } else {
       $('#screen-title').textContent = 'Templates';
       $('#screen-sub').textContent = 'Tap one to edit';
@@ -174,6 +182,16 @@
     $('#done-list').replaceChildren(...done.slice(0, 30).map(r => doneCard(r)));
 
     $('#template-list').replaceChildren(...state.templates.map(templateCard));
+
+    const order = { reply: 0, maybe: 1 };
+    const shown = state.inbox.filter(m => m.verdict in order)
+      .sort((a, b) => order[a.verdict] - order[b.verdict] || b.at - a.at);
+    const skipped = state.inbox.filter(m => !(m.verdict in order)).sort((a, b) => b.at - a.at);
+    $('#check-list').replaceChildren(...shown.map(checkCard));
+    $('#check-empty').hidden = state.inbox.length > 0;
+    $('#hidden-section').hidden = skipped.length === 0;
+    $('#hidden-count').textContent = `(${skipped.length})`;
+    $('#hidden-list').replaceChildren(...skipped.slice(0, 50).map(checkCard));
 
     if ('setAppBadge' in navigator) {
       (overdue ? navigator.setAppBadge(overdue) : navigator.clearAppBadge()).catch(() => {});
@@ -242,18 +260,21 @@
   const replyForm = $('#reply-form');
   let editingReplyId = null;
 
-  function openReplyEditor(id = null) {
+  let fromInboxId = null;
+
+  function openReplyEditor(id = null, prefill = null) {
     editingReplyId = id;
+    fromInboxId = prefill ? prefill.inboxId : null;
     const r = id ? state.replies.find(x => x.id === id) : null;
     replyForm.reset();
     $('#reply-dialog-title').textContent = r ? 'Edit reminder' : 'Who do you owe a reply?';
-    replyForm.name.value = r ? r.name : '';
-    replyForm.note.value = r ? (r.note || '') : '';
+    replyForm.name.value = r ? r.name : (prefill ? prefill.name : '');
+    replyForm.note.value = r ? (r.note || '') : (prefill ? prefill.note : '');
     replyForm.due.value = toLocalInput(r ? new Date(r.dueAt) : presetDue('3h'));
     document.querySelectorAll('#due-chips .chip').forEach(c => c.classList.toggle('on', !r && c.dataset.due === '3h'));
     ensureExtraButtons(r);
     replyDialog.showModal();
-    if (!r) setTimeout(() => replyForm.name.focus(), 50);
+    if (!r && !replyForm.name.value) setTimeout(() => replyForm.name.focus(), 50);
   }
 
   // Editing an existing item adds "Delete" and "Calendar alert" buttons.
@@ -291,6 +312,7 @@
       Object.assign(state.replies.find(x => x.id === editingReplyId), { name, note, dueAt });
     } else {
       state.replies.push({ id: uid(), name, note, dueAt, createdAt: Date.now(), doneAt: null });
+      if (fromInboxId) forget(fromInboxId);
     }
     replyDialog.close();
     save();
@@ -364,6 +386,113 @@
   });
   $('#new-template').addEventListener('click', () => openTemplateEditor());
 
+  // ---------- checking texts (on-device triage) ----------
+  const msgKey = (from, text) => (from.trim().toLowerCase() + '|' + text.trim().toLowerCase()).slice(0, 300);
+
+  function addToInbox(from, text) {
+    const key = msgKey(from, text);
+    if (state.inbox.some(m => m.key === key) || state.dismissed.includes(key)) return null;
+    const result = Triage.classify(text, from);
+    const item = { id: uid(), key, from: from.trim(), text: text.trim(), at: Date.now(),
+      verdict: result.verdict, intent: result.intent, reasons: result.reasons };
+    state.inbox.push(item);
+    return item;
+  }
+
+  // Removes a checked text and remembers it, so importing the same Shortcut file again skips it.
+  function forget(id) {
+    const m = state.inbox.find(x => x.id === id);
+    if (!m) return;
+    state.inbox = state.inbox.filter(x => x.id !== id);
+    state.dismissed = [m.key, ...state.dismissed].slice(0, 500);
+  }
+
+  function dismiss(id) {
+    forget(id);
+    save();
+  }
+
+  function checkCard(m) {
+    const name = m.from || 'Someone';
+    const pill = (label, fn, cls = 'pill') => {
+      const b = el('button', { type: 'button', className: cls, textContent: label });
+      b.addEventListener('click', fn);
+      return b;
+    };
+    const worth = m.verdict === 'reply' || m.verdict === 'maybe';
+    const sugg = worth ? el('div', { className: 'sugg' },
+      ...Triage.suggest(m, m.from).map(s => {
+        const b = el('button', { type: 'button', className: 'sugg-btn' },
+          el('b', { textContent: s.title + ' · tap to copy' }), s.text);
+        b.addEventListener('click', async () => {
+          const ok = await copyText(s.text);
+          toast(ok ? (/\[[^\]]+\]/.test(s.text) ? 'Copied. Fill in the [brackets] in Messages' : 'Copied. Paste it in Messages')
+                   : 'Copy failed. Select the text and copy it manually');
+        });
+        return b;
+      })) : null;
+    return el('li', { className: 'card' },
+      el('div', { className: 'who', textContent: name }),
+      el('span', { className: 'badge ' + m.verdict, textContent: Triage.VERDICTS[m.verdict] }),
+      el('div', { className: 'msg', textContent: m.text }),
+      el('div', { className: 'why', textContent: m.reasons.join(' · ') }),
+      sugg,
+      el('div', { className: 'row' },
+        worth ? pill('Remind me', () => openReplyEditor(null, {
+          inboxId: m.id, name: m.from, note: m.text.length > 120 ? m.text.slice(0, 117) + '…' : m.text,
+        }), 'pill primary') : null,
+        worth ? null : pill('Actually needs a reply', () => {
+          m.verdict = 'reply'; m.intent = Triage.classify(m.text, '').intent;
+          m.reasons = ['You marked this as needing a reply'];
+          save();
+        }),
+        pill('Dismiss', () => dismiss(m.id)),
+      ),
+    );
+  }
+
+  $('#check-paste').addEventListener('click', async () => {
+    try {
+      const text = await navigator.clipboard.readText();
+      if (text) $('#check-text').value = text;
+      else toast('Clipboard is empty. Copy a message first');
+    } catch (_) {
+      toast('Tap in the box and choose Paste instead');
+      $('#check-text').focus();
+    }
+  });
+
+  $('#check-run').addEventListener('click', () => {
+    const text = $('#check-text').value.trim();
+    if (!text) { toast('Paste a message first'); return; }
+    const item = addToInbox($('#check-from').value, text);
+    if (!item) { toast('You already checked that one'); return; }
+    $('#check-text').value = '';
+    $('#check-from').value = '';
+    save();
+    toast(Triage.VERDICTS[item.verdict]);
+  });
+
+  $('#check-import').addEventListener('change', async e => {
+    const file = e.target.files[0];
+    e.target.value = '';
+    if (!file) return;
+    const entries = Triage.parseInbox(await file.text());
+    const added = entries.map(x => addToInbox(x.from, x.text)).filter(Boolean);
+    save();
+    const worth = added.filter(x => x.verdict === 'reply').length;
+    toast(added.length
+      ? `Checked ${added.length} new text${added.length === 1 ? '' : 's'}, ${worth} worth replying to`
+      : `No new texts in that file`);
+  });
+
+  $('#clear-hidden').addEventListener('click', () => {
+    const skipped = state.inbox.filter(m => m.verdict !== 'reply' && m.verdict !== 'maybe');
+    state.dismissed = [...skipped.map(m => m.key), ...state.dismissed].slice(0, 500);
+    state.inbox = state.inbox.filter(m => !skipped.includes(m));
+    save();
+  });
+
   // ---------- shell ----------
   document.querySelectorAll('[data-close]').forEach(b =>
     b.addEventListener('click', () => b.closest('dialog').close()));
@@ -376,6 +505,7 @@
       currentView = tab.dataset.view;
       document.querySelectorAll('.tab').forEach(t => t.classList.toggle('active', t === tab));
       $('#view-replies').hidden = currentView !== 'replies';
+      $('#view-check').hidden = currentView !== 'check';
       $('#view-templates').hidden = currentView !== 'templates';
       $('#add-reply').hidden = currentView !== 'replies';
       render();

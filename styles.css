@@ -184,3 +184,29 @@ legend { font-size: 15px; font-weight: 600; padding: 0; margin-bottom: 6px; }
   max-width: calc(100% - 32px); text-align: center;
 }
 .toast.show { opacity: 1; transform: translate(-50%, 0); }
+
+.check-box { display: grid; gap: 10px; margin: 8px 0 16px; }
+.check-box textarea, .check-box input:not([type=file]) {
+  width: 100%; border: 1px solid var(--line); border-radius: 12px;
+  padding: 10px 12px; background: var(--surface); font-size: 17px;
+}
+.check-box textarea { resize: vertical; }
+.check-box .actions .primary, .check-box .actions .secondary { flex: 1; }
+.import-btn { text-align: center; color: var(--accent); font-size: 15px; padding: 4px; cursor: pointer; }
+
+.badge { font-size: 13px; font-weight: 600; border-radius: 999px; padding: 3px 9px; white-space: nowrap; }
+.badge.reply { background: var(--accent); color: var(--accent-text); }
+.badge.maybe { background: var(--line); color: var(--text); }
+.badge.none, .badge.automated { background: transparent; color: var(--muted); border: 1px solid var(--line); }
+.card .msg {
+  grid-column: 1 / -1; font-size: 16px; background: var(--bg); border-radius: 12px;
+  padding: 8px 12px; white-space: pre-wrap; overflow-wrap: anywhere;
+  display: -webkit-box; -webkit-line-clamp: 4; -webkit-box-orient: vertical; overflow: hidden;
+}
+.card .why { grid-column: 1 / -1; color: var(--muted); font-size: 14px; }
+.card .sugg { grid-column: 1 / -1; display: grid; gap: 6px; margin-top: 4px; }
+.sugg-btn {
+  text-align: left; border: 1px solid var(--line); background: var(--surface);
+  border-radius: 12px; padding: 8px 12px; font-size: 15px; cursor: pointer;
+}
+.sugg-btn b { display: block; font-size: 13px; color: var(--accent); }
